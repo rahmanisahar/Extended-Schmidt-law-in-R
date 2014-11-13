@@ -2,7 +2,7 @@
 # Created May, 2012 - Rahul Shetty
 # Uses other scripts from:
 # Kruschke, J. K. (2011). Doing Bayesian Data Analysis
-#just checking
+
 graphics.off()
 if (1) {
 #rm(list=ls(all=TRUE))
