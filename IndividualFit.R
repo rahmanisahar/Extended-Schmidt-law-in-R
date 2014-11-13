@@ -43,7 +43,7 @@ writeLines(modelstring,con="model.txt")
 #------------------------------------------------------------------------------
 # THE DATA.
 
-alldat=read.csv("M51data.csv")
+alldat=read.csv("M31data.csv")
 
 # Columns are "subjID" , "SurfD" , "errSurfD", "SFR" , "errSFR"
 colnames(alldat)=c("subjID" , "SurfD" , "errSurfD", "SFR" , "errSFR")
@@ -57,7 +57,7 @@ subjColName = "subjID" ; subjPlotLab = "Galaxy"
 xName=expression(Sigma[CO])
 yName=expression(Sigma[SFR])
 
-fileNameRoot = "M51fit"
+fileNameRoot = "M31fit"
 
 # Extract data info:
 Ndata = NROW(alldat)
@@ -204,7 +204,7 @@ windows()
 hist(b1, prob=TRUE)
 
 # Plots and Posterior Prediction? (set showplot=TRUE)
-makeplots=FALSE
+makeplots=TRUE
 
 if (makeplots) {
 # Posterior prediction:
