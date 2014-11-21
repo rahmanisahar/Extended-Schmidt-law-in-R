@@ -57,7 +57,7 @@ subjColName = "subjID" ; subjPlotLab = "Galaxy"
 xName=expression(Sigma[CO])
 yName=expression(Sigma[SFR])
 
-fileNameRoot = "M31fit"
+fileNameRoot = 
 
 # Extract data info:
 Ndata = NROW(alldat)
@@ -77,7 +77,8 @@ plot(x,y)
 # First inspect results from Simple Linear Regression
 
 lmfit <- lm(y~x)
-show(summary(lmfit))
+#show(summary(lmfit))
+#dev.copy(png)
 #------------------------------------------------------------------------------
 
 standardize=FALSE
@@ -198,11 +199,15 @@ if (standardize) {
 
 }
 
-windows()
+#windows()
+pdf("first_hist_b0.pdf")
 hist(b0, prob=TRUE)
-windows()
+dev.off()
+#dev.copy2pdf(file=pase("first_hist_b0.pdf"))
+#windows()
+pdf("first_hist_b1.pdf")
 hist(b1, prob=TRUE)
-
+dev.off()
 # Plots and Posterior Prediction? (set showplot=TRUE)
 makeplots=TRUE
 
@@ -240,32 +245,35 @@ for ( xIdx in 1:numPostPred ) {
 }
 
 # Display believable beta0 and b1 values
-quartz()
+#quartz()
+pdf("M31fitSlopeIntercept.pdf")
 thinIdx = seq(1,length(b0),length=700)
 plot( z1[thinIdx] , z0[thinIdx] , cex.lab=1.75 ,
       ylab="Standardized Intercept" , xlab="X" )
 plot( b1[thinIdx] , b0[thinIdx] , cex.lab=1.75 ,
       ylab="Intercept (ht when wt=0)" , xlab="X" )
-dev.copy2eps( file = paste(fileNameRoot,"SlopeIntercept.eps",sep="") )
-
+#dev.copy2pdf( file = paste(fileNameRoot,"SlopeIntercept.pdf",sep="") )
+dev.off()
 # Display the posterior of the b1:
 source("plotPost.R")
-quartz()
+#quartz()
+pdf("M31fitPostSlope.pdf")
 histInfo = plotPost( z1 , xlab="Standardized slope" , compVal=0.0 ,
                      breaks=30  )
 histInfo = plotPost( b1 , xlab="Slope" , compVal=0.0 ,
                      breaks=30  )
-dev.copy2eps( file = paste(fileNameRoot,"PostSlope.eps",sep="") )
-
-quartz()
+#dev.copy2pdf( file = paste(fileNameRoot,"PostSlope.pdf",sep="") )
+dev.off()
+#quartz()
+pdf("M31fitPostIntercept.pdf")
 histInfo = plotPost( z0 , xlab="Standardized Int" , compVal=0.0 ,
                      breaks=30  )
 histInfo = plotPost( b0 , xlab="Intercept" , compVal=0.0 ,
                      breaks=30  )
-dev.copy2eps( file = paste(fileNameRoot,"PostIntercept.eps",sep="") )
-
+#dev.copy2pdf( file = paste(fileNameRoot,"PostIntercept.pdf",sep="") )
+dev.off()
 # Display data with believable regression lines and posterior predictions.
-windows()
+#windows()
 par( mar=c(3,3,2,1)+0.5 , mgp=c(2.1,0.8,0) )
 # Plot data values:
 xRang = max(x)-min(x)
@@ -273,6 +281,7 @@ yRang = max(y)-min(y)
 limMult = 0.25
 xLim= c( min(x)-limMult*xRang , max(x)+limMult*xRang )
 yLim= c( min(y)-limMult*yRang , max(y)+limMult*yRang )
+pdf("M31fitDataLines.pdf")
 plot( x , y , cex=1.5 , lwd=2 , col="black" , xlim=xLim , ylim=yLim ,
       xlab="X" , ylab="Y", cex.lab=1.5 ,
       main="Data with credible regression lines" , cex.main=1.33  )
@@ -280,11 +289,12 @@ plot( x , y , cex=1.5 , lwd=2 , col="black" , xlim=xLim , ylim=yLim ,
 for ( i in seq(from=1,to=length(b0),length=50) ) {
     abline( b0[i] , b1[i] , col="grey" )
 }
-dev.copy2eps( file = paste(fileNameRoot,"DataLines.eps",sep="") )
-
+#dev.copy2pdf( file = paste(fileNameRoot,"DataLines.pdf",sep="") )
+dev.off()
 # Display data with HDIs of posterior predictions.
-quartz()
+#quartz()
 # Plot data values:
+pdf("M31fitDataPred.pdf")
 yLim= c( min(yHDIlim) , max(yHDIlim) )
 plot( x , y , cex=1.5 , lwd=2 , col="black" ,
       xlab="X" , ylab="Y", cex.lab=1.5 ,
@@ -295,14 +305,15 @@ for ( i in 1:numPostPred ) {
     segments( xPostPred, yHDIlim[,1] , xPostPred, yHDIlim[,2] , lwd=3, col="grey" )
     points( xPostPred , rowMeans( yPostPred ) , pch="+" , cex=2 , col="grey" )
 }
-dev.copy2eps( file = paste(fileNameRoot,"DataPred.eps",sep="") )
+#dev.copy2pdf( file = paste(fileNameRoot,"DataPred.pdf",sep="") )
+dev.off()
 
-
-quartz()
+#quartz()
+pdf("M31fitySigma.pdf")
 histInfo = plotPost( sigmay , xlab=expression(sigma[Y]) , compVal=0.0 ,
                      breaks=30  )
-dev.copy2eps( file = paste(fileNameRoot,"ySigma.eps",sep="") )
-
+#dev.copy2pdf( file = paste(fileNameRoot,"ySigma.pdf",sep="") )
+dev.off()
 }
 }
 #------------------------------------------------------------------------------
