@@ -57,7 +57,7 @@ subjColName = "subjID" ; subjPlotLab = "Galaxy"
 xName=expression(Sigma[CO])
 yName=expression(Sigma[SFR])
 
-fileNameRoot = 
+fileNameRoot = "m31Fit"
 
 # Extract data info:
 Ndata = NROW(alldat)
@@ -70,13 +70,14 @@ xerr = alldat[,3]
 yerr = alldat[,5]
 
 nSubj=length(x)
-
+pdf("first_plot.pdf")
 plot(x,y)
-
+dev.off()
 #------------------------------------------------------------------------------
 # First inspect results from Simple Linear Regression
 
 lmfit <- lm(y~x)
+
 #show(summary(lmfit))
 #dev.copy(png)
 #------------------------------------------------------------------------------
@@ -156,9 +157,9 @@ codaSamples = coda.samples( jagsModel , variable.names=parameters ,
 checkConvergence = F
 show( summary( codaSamples ) )
 if ( checkConvergence ) {
-  windows()
+  #windows()
   plot( codaSamples , ask=T )
-  windows()
+  #windows()
   autocorr.plot( codaSamples , ask=T )
 }
 
