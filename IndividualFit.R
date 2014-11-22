@@ -1,5 +1,7 @@
-# Script to perform Bayesian linear regression, with measurement error.
-# Created May, 2012 - Rahul Shetty
+# Modified Script to perform Baysian linear regression using three parameters with measurment error i.e. The Extended Schmidt law
+# Modified Nov 2013 by Sahar Rahmani & Dr. Pauline Barmby 
+# Script to perform Bayesian mutiple linear regression, with measurement error.
+# Orginal Script was from Rahul Shetty (2012) fot fitting Schmidt-Kennicutt law  
 # Uses other scripts from:
 # Kruschke, J. K. (2011). Doing Bayesian Data Analysis
 
@@ -19,21 +21,27 @@ model {
         x[i] ~ dnorm( mux[i] , 1.0/(xerr[i]^2) )
         mux[i] ~ dnorm( xbar, taux )
 
+        x2[i] ~ dnorm( mux2[i] , 1.0/(x2err[i]^2) )
+        mux2[i] ~ dnorm( x2bar, taux2 )
+
         y[i] ~ dnorm( muy[i] , 1.0/(yerr[i]^2) )
 
         muy[i] ~ dnorm( mu[i] , tauy )
 
-        mu[i] <- beta0 + beta1 * mux[i] + muscat[i]
+        mu[i] <- beta0 + beta1 * mux[i] + beta2 * mux2[i] + muscat[i]
         muscat[i] ~ dnorm( 0 , tauscat )
 
     }
 
     beta0 ~ dnorm( 0 , 1.0E-12 )
     beta1 ~ dnorm( 0 , 1.0E-12 )
+    beta2 ~ dnorm( 0 , 1.0E-12 )
     xbar ~ dnorm( 0 , 1.0E-12 )
+    x2bar ~ dnorm( 0 , 1.0E-12 )
 
     tauy ~ dgamma( 0.001 , 0.001 )
     taux ~ dgamma( 0.001 , 0.001 )
+    taux2 ~ dgamma( 0.001 , 0.001 )
     tauscat ~ dgamma( 0.001 , 0.001 )
 
 }
@@ -45,16 +53,20 @@ writeLines(modelstring,con="model.txt")
 
 alldat=read.csv("M31data.csv")
 
-# Columns are "subjID" , "SurfD" , "errSurfD", "SFR" , "errSFR"
-colnames(alldat)=c("subjID" , "SurfD" , "errSurfD", "SFR" , "errSFR")
+#SurfD: Gas surface Density ; StarD: Stellar mass surface density
+# Columns are "subjID" , "SurfD", "errSurfD", "StarD", "errStarD", "SFR", "errSFR"
+colnames(alldat)=c("subjID" , "SurfD" , "errSurfD", "StarD", "errStarD","SFR" , "errSFR")
 
 # set strings for plotting labels and file names:  
 yColName = "SFR" ; yPlotLab = "log SFR"
 xColName = "SurfD" ; xPlotLab = "Surf Density"
+x2ColName = "StarfD" ; x2PlotLab = "Stellar mass surface density"
 xerrColName="errSurfD"
+x2errCollname="errStarD"
 yerrColName="errSFR"
 subjColName = "subjID" ; subjPlotLab = "Galaxy"
 xName=expression(Sigma[CO])
+x2Name=expression(Sigma[Stellar mass])
 yName=expression(Sigma[SFR])
 
 fileNameRoot = "m31Fit"
@@ -65,21 +77,24 @@ Ndata = NROW(alldat)
 # levels=unique() argument in factor statement...
 
 x=alldat[,2]
-y=alldat[,4]
+x2=alldat[,4]
+y=alldat[,6]
 xerr = alldat[,3]
-yerr = alldat[,5]
+x2err = alldat[,5]
+yerr = alldat[,7]
 
 nSubj=length(x)
 pdf("first_plot.pdf")
-plot(x,y)
+scatterplot3d(x,x2,y)   # needs special package from http://cran.r-project.org/web/packages/scatterplot3d/index.html
 dev.off()
 #------------------------------------------------------------------------------
-# First inspect results from Simple Linear Regression
+# First inspect results from Multiple Linear Regression
+# result: lmfit$coef[1] + lmfit$coef[2]*x + lmfit$coef[3]*x2 
+lmfit <- lm(y~x+x2) # from http://www.statmethods.net/stats/regression.html
 
-lmfit <- lm(y~x)
 
 #show(summary(lmfit))
-#dev.copy(png)
+dev.copy(png)
 #------------------------------------------------------------------------------
 
 standardize=FALSE
@@ -90,40 +105,50 @@ standardize=FALSE
 
 if (standardize) {
     xM = mean( x ) ; xSD = sd( x )
+    x2M = mean( x2 ) ; x2SD = sd ( x2 )
     yM = mean( y ) ; ySD = sd( y )
     zx = ( x - xM ) / xSD
+    zx2 = ( x2 - x2M ) / x2SD
     zy = ( y - yM ) / ySD
 
     xerr=xerr*zx
+    x2err=x2err*zx2
     yerr=yerr*zy
 } else {
     zx=x
+    zx2=x2
     zy=y
 }
 
 minx=min(x)
 maxx=max(x)
-
+minx2=min(x2)
+maxx2=max(x2)
 # Specify data, as a list.
 dataList = list(
   x = zx ,
+  x2 = zx2 ,
   y = zy ,
   Ndata = nSubj,
   xerr = xerr,
+  x2err = x2err,
   yerr = yerr
 )
 
 #------------------------------------------------------------------------------
 # INTIALIZE THE CHAINS.
-
-r = cor(x,y)
+r = lmfit$coef[2]*xSD/ySD # This is calculated here http://www.indiana.edu/~kruschke/DoingBayesianDataAnalysis/Programs/MultiLinRegressInterJags.R as I unedrstand
+r2 = lmfit$coef[3]*x2SD/ySD
 initsList = list(
     beta0 = 0 ,    # because data are standardized
     beta1 = r ,        # because data are standardized
-    tauy = 1 / (1-r^2),  # because data are standardized
+    beta2 = r2 ,       # beacuase data are standardized 
+    tauy = (length(y)*sd(y)^2)/sum(lmfit$res^2),  # this 1 / sqrt((1-r^2)^2 + (1-r2^2)^2)? or this (length(y)*ySD^2)/sum(lmfit$res^2)
     taux = 1 / (1-r^2),  # because data are standardized
+    taux2 = 1 / (1-r2^2),  # because data are standardized
     tauscat = 10.0,
     xbar=mean(x)
+    x2bar=mean(x2)
 )
 
 #------------------------------------------------------------------------------
@@ -131,7 +156,7 @@ initsList = list(
 # RUN THE CHAINS
 
 if (1) {
-parameters = c("beta0" , "beta1" , "tauy", "taux", "tauscat", "xbar")  # The parameter(s) to be monitored.
+parameters = c("beta0" , "beta1" , "beta2", "tauy", "taux", "taux2","tauscat", "xbar","x2bar")  # The parameter(s) to be monitored.
 adaptSteps = 500              # Number of steps to "tune" the samplers.
 burnInSteps = 5000            # Number of steps to "burn-in" the samplers.
 nChains = 3                   # Number of chains to run.
@@ -169,19 +194,23 @@ if ( checkConvergence ) {
 mcmcChain = as.matrix( codaSamples )
 
 # Extract chain values:
-z0 = mcmcChain[, "beta0" ]
-z1 = mcmcChain[, "beta1" ]
-zTauy = mcmcChain[, "tauy" ]
-zTaux = mcmcChain[, "taux" ]
-zTauscat = mcmcChain[, "tauscat" ]
-zxbar = mcmcChain[, "xbar" ]
+z0 = matrix( mcmcChain[, "beta0" ] )
+z1 = matrix( mcmcChain[, "beta1" ] )
+z2 = matrix( mcmcChain[, "beta2" ] )
+zTauy = matrix( mcmcChain[, "tauy" ] )
+zTaux = matrix( mcmcChain[, "taux" ] )
+zTaux2 = matrix( mcmcChain[, "taux2" ] )
+zTauscat = matrix( mcmcChain[, "tauscat" ] )
+zxbar = matrix( mcmcChain[, "xbar" ] )
+zx2bar = matrix( mcmcChain[, "x2bar" ] )
 
 } # if on line 2
 
 # Convert to original scale:
 if (standardize) {
-    b1 = z1 * ySD / xSD
-    b0 = ( z0 * ySD + yM - z1 * ySD * xM / xSD )
+    b1 = z1 * ySD / xSD # cause there is no correlation between x and x1
+    b2 = z2 * ySD / x2SD
+    b0 = ( z0 * ySD + yM - z1 * ySD * xM / xSD - z2 * ySD * x2M / x2SD )
 
     sigmascat = 1/sqrt(zTauscat * ySD)  # Convert precision to SD
     sigmay = 1 / sqrt( zTauy )
@@ -189,14 +218,18 @@ if (standardize) {
 } else {
 
     b1 = z1
+    b2 = z2
     b0 = z0
     xbar = zxbar
+    x2bar = zx2bar
 
 # Convert precision to SD
     sigmay = 1 / sqrt( zTauy )
     sigmascat = 1 / sqrt( zTauscat ) # Convert precision to SD
 
     sigmax = 1 / sqrt( zTaux ) # Convert precision to SD, but sigmax not really needed
+    sigmax2 = 1 / sqrt( zTaux2 ) # Convert precision to SD, but sigmax not really needed
+
 
 }
 
@@ -208,6 +241,10 @@ dev.off()
 #windows()
 pdf("first_hist_b1.pdf")
 hist(b1, prob=TRUE)
+dev.off()
+
+pdf("first_hist_b2.pdf")
+hist(b2, prob=TRUE)
 dev.off()
 # Plots and Posterior Prediction? (set showplot=TRUE)
 makeplots=TRUE
