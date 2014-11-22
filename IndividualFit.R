@@ -1,4 +1,4 @@
-# Modified Script to perform Baysian linear regression using three parameters with measurment error i.e. The Extended Schmidt law
+# Modified Script to perform Baysian multiple linear regression using three parameters with measurment error i.e. The Extended Schmidt law
 # Modified Nov 2013 by Sahar Rahmani & Dr. Pauline Barmby 
 # Script to perform Bayesian mutiple linear regression, with measurement error.
 # Orginal Script was from Rahul Shetty (2012) fot fitting Schmidt-Kennicutt law  
@@ -66,7 +66,7 @@ x2errCollname="errStarD"
 yerrColName="errSFR"
 subjColName = "subjID" ; subjPlotLab = "Galaxy"
 xName=expression(Sigma[CO])
-x2Name=expression(Sigma[Stellar mass])
+x2Name=expression(Sigma[Stellar_mass])
 yName=expression(Sigma[SFR])
 
 fileNameRoot = "m31Fit"
@@ -147,9 +147,9 @@ initsList = list(
     taux = 1 / (1-r^2),  # because data are standardized
     taux2 = 1 / (1-r2^2),  # because data are standardized
     tauscat = 10.0,
-    xbar=mean(x)
+    xbar=mean(x),
     x2bar=mean(x2)
-)
+  )
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -232,6 +232,24 @@ if (standardize) {
 
 
 }
+save( b0, b1 , b2 , sigmascat , sigmay, sigmax , sigmax2 , file=paste(fileNameRoot,".Rdata",sep="") )
+#-------------------------------------------------------------------------------------------------------------------
+#Plotting
+#-------------------------------------------------------------------------------------------------------------------      
+source("plotPost.R")
+predictedName = "Intercept"
+
+# Scatter plots of parameter values, pairwise:
+#windows()
+thinIdx = seq(1,length(b0),length=200)
+pairs( cbind( sigmascat[thinIdx] , b0[thinIdx] , b1[thinIdx,] ,
+                  b2[thinIdx,] ) ,
+       labels=c( "Sigma SFR" , "Intercept" ,
+                 paste("Beta",xColName,sep="") ,
+                 paste("Beta",x2ColName,sep="") ,
+                 "Interaction" ) , col="skyblue" )
+savePlot(file=paste(fileNameRoot,"PostPairs",sep=""),type="eps")
+savePlot(file=paste(fileNameRoot,"PostPairs",sep=""),type="jpg")
 
 #windows()
 pdf("first_hist_b0.pdf")
@@ -247,8 +265,76 @@ pdf("first_hist_b2.pdf")
 hist(b2, prob=TRUE)
 dev.off()
 # Plots and Posterior Prediction? (set showplot=TRUE)
+layout( matrix(1:5,nrow=1) )
+par( mar=c(4,3,5,0) , mgp=c(2,0.7,0) )
+histInfo = plotPost( sigmascat , xlab="Sigma Value" , compVal=NULL ,
+                     breaks=30 , main=bquote(sigma[y]) ,
+                     cex.main=1.67 , cex.lab=1.33 )
+histInfo = plotPost( b0 , xlab="Intercept Value" , compVal=NULL ,
+                     breaks=30 , main=bquote(.(predictedName) *" at all "* x==0) ,
+                     cex.main=1.67 , cex.lab=1.33 )
+histInfo = plotPost( b1 , xlab="Beta1 Value" , compVal=NULL ,
+                     breaks=30 , cex.main=1.5 , cex.lab=1.33 ,
+                     main=bquote( atop( Delta * .(predictedName) /
+                                  Delta * .(xColName)  ,
+                                  " at "* .(x2ColName)==0 ) ) )
+histInfo = plotPost( b2 , xlab="Beta2 Value" , compVal=NULL ,
+                     breaks=30 , cex.main=1.5 , cex.lab=1.33 ,
+                     main=bquote( atop( Delta * .(predictedName) /
+                                  Delta * .(x2ColName)  ,
+                                  " at "* .(xColName)==0 ) ) )
+savePlot(file=paste(fileNameRoot,"PostHist",sep=""),type="eps")
+savePlot(file=paste(fileNameRoot,"PostHist",sep=""),type="jpg")
 makeplots=TRUE
 
+# Credible slopes as function of value of other predictor:
+source("HDIofMCMC.R")
+
+par( mar=c(4,4,3,0) , mgp=c(2,0.7,0) )
+x2low = max( minx2 - 0.1 * ( maxx2 - minx2) , 0 )
+x2high = maxx2 + 0.1 * ( maxx2 - minx2 )
+x2comb = seq( x2low , x2high , length=20 )
+beta1HDI = matrix( 0 , nrow=3 , ncol=length(x2comb) )
+for ( x2idx in 1:length(x2comb) ) {
+    slope1Samp = b1
+    HDIlim = HDIofMCMC( slope1Samp )
+    beta1HDI[,x2idx] = c( HDIlim[1] , mean(slope1Samp) , HDIlim[2] )
+}
+plot( x2comb , beta1HDI[2,] , type="o" , pch="+" , cex=2 , col="skyblue" ,
+      ylim=c(min(beta1HDI),max(beta1HDI)) ,
+      xlab=bquote("Value of "*.(x2ColName)) ,
+      ylab=bquote("Slope along "*.(xColName)) ,
+      main="Posterior mean and 95% HDI of slope" ,
+      cex.lab=1.5 )
+abline( h=0 , lty="dashed" )
+segments( x2comb , beta1HDI[1,] , x2comb , beta1HDI[3,] , lwd=4 , col="skyblue" )
+savePlot(file=paste(fileNameRoot,"PostSlope1",sep=""),type="eps")
+savePlot(file=paste(fileNameRoot,"PostSlope1",sep=""),type="jpg")
+#
+#windows(7,5)
+par( mar=c(4,4,3,0) , mgp=c(2,0.7,0) )
+# x1low = max( min(x[,1]) - 0.1 * ( max(x[,1]) - min(x[,2]) ) , 0 )
+# x1high = max(x[,1]) + 0.1 * ( max(x[,1]) - min(x[,1]) )
+x1low = 0 ; x1high = 50
+x1comb = seq( x1low , x1high , length=20 )
+beta2HDI = matrix( 0 , nrow=3 , ncol=length(x1comb) )
+for ( x1idx in 1:length(x1comb) ) {
+    slope2Samp = b2
+    HDIlim = HDIofMCMC( slope2Samp )
+    beta2HDI[,x1idx] = c( HDIlim[1] , mean(slope2Samp) , HDIlim[2] )
+}
+plot( x1comb , beta2HDI[2,] , type="o" , pch="+" , cex=2 , col="skyblue" ,
+      ylim=c(min(beta2HDI),max(beta2HDI)) ,
+      xlab=bquote("Value of "*.(xColName)) ,
+      ylab=bquote("Slope along "*.(x2ColName)) ,
+      main="Posterior mean and 95% HDI of slope" ,
+      cex.lab=1.5 )
+abline( h=0 , lty="dashed" )
+segments( x1comb , beta2HDI[1,] , x1comb , beta2HDI[3,] , lwd=4 , col="skyblue" )
+savePlot(file=paste(fileNameRoot,"PostSlope2",sep=""),type="eps")
+savePlot(file=paste(fileNameRoot,"PostSlope2",sep=""),type="jpg")
+
+# from here is almost the same plotting as original version
 if (makeplots) {
 # Posterior prediction:
 # Specify x values for which predicted y's are needed:
@@ -260,6 +346,9 @@ xPostPred = seq(min(x),max(x),length=numPostPred)
 postSampSize = length(b1)
 xHDIlim = matrix( 0 , nrow=numPostPred , ncol=2 )
 
+x2PostPred = seq(min(x2),max(x2),length=numPostPred)
+postSampSize2 = length(b2)
+x2HDIlim = matrix( 0 , nrow=numPostPred , ncol=2 )
 # Define matrix for recording posterior predicted y values at each x value.
 # One row per x value, with each row holding random predicted y values.
 
@@ -273,11 +362,11 @@ yHDIlim = matrix( 0 , nrow=numPostPred , ncol=2 )
 
 for ( chainIdx in 1:postSampSize ) {
     yPostPred[,chainIdx] = rnorm( numPostPred ,
-                           mean = b0[chainIdx] + b1[chainIdx] * xPostPred + sigmascat[chainIdx],
+                           mean = b0[chainIdx] + b1[chainIdx] * xPostPred + b2[chainIdx] * x2PostPred+ sigmascat[chainIdx],
                            sd = rep( sigmay[chainIdx] , numPostPred ))
 }
 
-source("HDIofMCMC.R")
+#source("HDIofMCMC.R")
 for ( xIdx in 1:numPostPred ) {
     yHDIlim[xIdx,] = HDIofMCMC( yPostPred[xIdx,] )
 }
@@ -293,7 +382,6 @@ plot( b1[thinIdx] , b0[thinIdx] , cex.lab=1.75 ,
 #dev.copy2pdf( file = paste(fileNameRoot,"SlopeIntercept.pdf",sep="") )
 dev.off()
 # Display the posterior of the b1:
-source("plotPost.R")
 #quartz()
 pdf("M31fitPostSlope.pdf")
 histInfo = plotPost( z1 , xlab="Standardized slope" , compVal=0.0 ,
