@@ -82,6 +82,7 @@ y=alldat[,6]
 xerr = alldat[,3]
 x2err = alldat[,5]
 yerr = alldat[,7]
+library(scatterplot3d)
 
 nSubj=length(x)
 pdf("first_plot.pdf")
@@ -94,7 +95,7 @@ lmfit <- lm(y~x+x2) # from http://www.statmethods.net/stats/regression.html
 
 
 #show(summary(lmfit))
-dev.copy(png)
+#dev.copy(png)
 #------------------------------------------------------------------------------
 
 standardize=FALSE
@@ -118,6 +119,9 @@ if (standardize) {
     zx=x
     zx2=x2
     zy=y
+    xSD = sd( x )
+     x2SD = sd ( x2 )
+     ySD = sd( y )
 }
 
 minx=min(x)
