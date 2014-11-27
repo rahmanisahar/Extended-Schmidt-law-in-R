@@ -182,7 +182,7 @@ codaSamples = coda.samples( jagsModel , variable.names=parameters ,
 
 #------------------------------------------------------------------------------
 # EXAMINE THE RESULTS
-
+#pdf("M31summaryofcodaSample.pdf")
 checkConvergence = F
 show( summary( codaSamples ) )
 if ( checkConvergence ) {
@@ -191,7 +191,7 @@ if ( checkConvergence ) {
   #windows()
   autocorr.plot( codaSamples , ask=T )
 }
-
+#dev.off()
 # Convert coda-object codaSamples to matrix object for easier handling.
 # But note that this concatenates the different chains into one long chain.
 # Result is mcmcChain[ stepIdx , paramIdx ]
@@ -245,16 +245,17 @@ predictedName = "Intercept"
 
 # Scatter plots of parameter values, pairwise:
 #windows()
+pdf("M31PostPair.pdf")
 thinIdx = seq(1,length(b0),length=200)
 pairs( cbind( sigmascat[thinIdx] , b0[thinIdx] , b1[thinIdx,] ,
                   b2[thinIdx,] ) ,
        labels=c( "Sigma SFR" , "Intercept" ,
-                 paste("Beta",xColName,sep="") ,
-                 paste("Beta",x2ColName,sep="") ,
+                 paste("N.eps",sep="") ,
+                 paste("Beta.eps",sep="") ,
                  "Interaction" ) , col="skyblue" )
-savePlot(file=paste(fileNameRoot,"PostPairs",sep=""),type="eps")
-savePlot(file=paste(fileNameRoot,"PostPairs",sep=""),type="jpg")
-
+#savePlot(file=paste(fileNameRoot,"PostPairs",sep=""),type="eps")
+#savePlot(file=paste(fileNameRoot,"PostPairs",sep=""),type="jpg")
+dev.off()
 #windows()
 pdf("first_hist_b0.pdf")
 hist(b0, prob=TRUE)
@@ -269,6 +270,7 @@ pdf("first_hist_b2.pdf")
 hist(b2, prob=TRUE)
 dev.off()
 # Plots and Posterior Prediction? (set showplot=TRUE)
+pdf("M31PostHist.pdf")
 layout( matrix(1:5,nrow=1) )
 par( mar=c(4,3,5,0) , mgp=c(2,0.7,0) )
 histInfo = plotPost( sigmascat , xlab="Sigma Value" , compVal=NULL ,
@@ -287,13 +289,14 @@ histInfo = plotPost( b2 , xlab="Beta2 Value" , compVal=NULL ,
                      main=bquote( atop( Delta * .(predictedName) /
                                   Delta * .(x2ColName)  ,
                                   " at "* .(xColName)==0 ) ) )
-savePlot(file=paste(fileNameRoot,"PostHist",sep=""),type="eps")
-savePlot(file=paste(fileNameRoot,"PostHist",sep=""),type="jpg")
+#savePlot(file=paste(fileNameRoot,"PostHist",sep=""),type="eps")
+#savePlot(file=paste(fileNameRoot,"PostHist",sep=""),type="jpg")
+dev.off()
 makeplots=TRUE
 
 # Credible slopes as function of value of other predictor:
 source("HDIofMCMC.R")
-
+pdf("M31PostSlope1.pdf")
 par( mar=c(4,4,3,0) , mgp=c(2,0.7,0) )
 x2low = max( minx2 - 0.1 * ( maxx2 - minx2) , 0 )
 x2high = maxx2 + 0.1 * ( maxx2 - minx2 )
@@ -312,10 +315,12 @@ plot( x2comb , beta1HDI[2,] , type="o" , pch="+" , cex=2 , col="skyblue" ,
       cex.lab=1.5 )
 abline( h=0 , lty="dashed" )
 segments( x2comb , beta1HDI[1,] , x2comb , beta1HDI[3,] , lwd=4 , col="skyblue" )
-savePlot(file=paste(fileNameRoot,"PostSlope1",sep=""),type="eps")
-savePlot(file=paste(fileNameRoot,"PostSlope1",sep=""),type="jpg")
+#savePlot(file=paste(fileNameRoot,"PostSlope1",sep=""),type="eps")
+#savePlot(file=paste(fileNameRoot,"PostSlope1",sep=""),type="jpg")
+dev.off()
 #
 #windows(7,5)
+pdf("M31PostSlope2.pdf")
 par( mar=c(4,4,3,0) , mgp=c(2,0.7,0) )
 # x1low = max( min(x[,1]) - 0.1 * ( max(x[,1]) - min(x[,2]) ) , 0 )
 # x1high = max(x[,1]) + 0.1 * ( max(x[,1]) - min(x[,1]) )
@@ -335,9 +340,9 @@ plot( x1comb , beta2HDI[2,] , type="o" , pch="+" , cex=2 , col="skyblue" ,
       cex.lab=1.5 )
 abline( h=0 , lty="dashed" )
 segments( x1comb , beta2HDI[1,] , x1comb , beta2HDI[3,] , lwd=4 , col="skyblue" )
-savePlot(file=paste(fileNameRoot,"PostSlope2",sep=""),type="eps")
-savePlot(file=paste(fileNameRoot,"PostSlope2",sep=""),type="jpg")
-
+#savePlot(file=paste(fileNameRoot,"PostSlope2",sep=""),type="eps")
+#savePlot(file=paste(fileNameRoot,"PostSlope2",sep=""),type="jpg")
+dev.off
 # from here is almost the same plotting as original version
 if (makeplots) {
 # Posterior prediction:
@@ -447,4 +452,3 @@ dev.off()
 }
 }
 #------------------------------------------------------------------------------
-
