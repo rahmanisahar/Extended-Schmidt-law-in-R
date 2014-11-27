@@ -250,8 +250,8 @@ thinIdx = seq(1,length(b0),length=200)
 pairs( cbind( sigmascat[thinIdx] , b0[thinIdx] , b1[thinIdx,] ,
                   b2[thinIdx,] ) ,
        labels=c( "Sigma SFR" , "Intercept" ,
-                 paste("N.eps",sep="") ,
-                 paste("Beta.eps",sep="") ,
+                 paste("Beta",xColName,sep="") ,
+                 paste("Beta",x2ColName,sep="") ,
                  "Interaction" ) , col="skyblue" )
 #savePlot(file=paste(fileNameRoot,"PostPairs",sep=""),type="eps")
 #savePlot(file=paste(fileNameRoot,"PostPairs",sep=""),type="jpg")
